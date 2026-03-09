@@ -10,20 +10,45 @@ HOFMAN_API_KEY = os.environ["HOFMAN_API_KEY"]
 SHOPIFY_TOKEN  = os.environ["SHOPIFY_TOKEN"]
 SHOPIFY_STORE  = os.environ["SHOPIFY_STORE"]
 
-HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl/api"
+HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2024-01"
 
-HOFMAN_HEADERS  = {"x-api-key": HOFMAN_API_KEY, "Content-Type": "application/json"}
 SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
 
 
 # ── 1. STOCKS ────────────────────────────────────────────────────────────────
 
 def get_hofman_variants():
-    """Récupère tous les produits Hofman avec leur stock (in_stock)."""
-    r = requests.get(f"{HOFMAN_BASE}/variants", headers=HOFMAN_HEADERS)
-    r.raise_for_status()
-    return r.json()
+    """Récupère tous les produits Hofman via le feed paginé."""
+    all_items = []
+    page = 1
+    while True:
+        r = requests.get(
+            f"{HOFMAN_BASE}/variant-feed",
+            params={"api_key": HOFMAN_API_KEY, "page": page}
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        # Gère les formats : liste directe ou objet paginé {data: [...]}
+        if isinstance(data, list):
+            items = data
+        else:
+            items = data.get("data", data.get("items", []))
+
+        if not items:
+            break
+
+        all_items += items
+        log.info(f"  Page {page} : {len(items)} produits récupérés")
+
+        # Si moins de 250 résultats, c'est la dernière page
+        if len(items) < 250:
+            break
+        page += 1
+
+    log.info(f"  Total Hofman : {len(all_items)} produits")
+    return all_items
 
 def get_shopify_variants():
     variants = []
@@ -51,22 +76,21 @@ def sync_stock():
     shopify_variants = get_shopify_variants()
     location_id      = get_location_id()
 
-    # Index Hofman par EAN et par article_number
+    # Index par EAN et article_number
     hofman_by_ean = {}
     hofman_by_ref = {}
     for item in hofman_variants:
         qty = 1 if str(item.get("in_stock", "0")) == "1" else 0
         if item.get("ean"):
-            hofman_by_ean[item["ean"]] = qty
+            hofman_by_ean[str(item["ean"])] = qty
         if item.get("article_number"):
-            hofman_by_ref[item["article_number"]] = qty
+            hofman_by_ref[str(item["article_number"])] = qty
 
     updated = 0
     for variant in shopify_variants:
-        sku = variant.get("sku") or ""
-        barcode = variant.get("barcode") or ""
+        sku     = str(variant.get("sku") or "")
+        barcode = str(variant.get("barcode") or "")
 
-        # Cherche d'abord par EAN (barcode), puis par SKU (article_number)
         if barcode and barcode in hofman_by_ean:
             new_qty = hofman_by_ean[barcode]
         elif sku and sku in hofman_by_ref:
@@ -124,7 +148,11 @@ def send_order_to_hofman(order):
             if item.get("sku")
         ]
     }
-    r = requests.post(f"{HOFMAN_BASE}/orders", headers=HOFMAN_HEADERS, json=hofman_order)
+    r = requests.post(
+        f"{HOFMAN_BASE}/orders",
+        params={"api_key": HOFMAN_API_KEY},
+        json=hofman_order
+    )
     return r.status_code in (200, 201), r
 
 def tag_order_as_sent(order_id):
