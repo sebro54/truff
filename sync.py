@@ -15,7 +15,7 @@ log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON VIDE'}")
 log.info(f"HOFMAN_API_KEY présent: {'oui' if HOFMAN_API_KEY else 'NON VIDE'}")
 
 HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
-SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2026-01""
+SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2026-01"
 
 def get_shopify_headers():
     return {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
