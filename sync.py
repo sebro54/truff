@@ -14,7 +14,7 @@ HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2024-01"
 
 SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
-HOFMAN_HEADERS  = {"Locale": "fr", "Content-Type": "application/json"}
+HOFMAN_HEADERS  = {"Locale": "en", "Content-Type": "application/json"}
 
 
 # ── 1. STOCKS ────────────────────────────────────────────────────────────────
