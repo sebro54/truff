@@ -1,0 +1,29 @@
+name: Truffeo Sync
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # toutes les 5 min pour les commandes
+  workflow_dispatch:          # permet de lancer manuellement aussi
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run sync
+        env:
+          HOFMAN_API_KEY: ${{ secrets.HOFMAN_API_KEY }}
+          SHOPIFY_TOKEN: ${{ secrets.SHOPIFY_TOKEN }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+        run: python sync.py
