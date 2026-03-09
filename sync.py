@@ -19,8 +19,9 @@ SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "app
 
 # ── 1. STOCKS ────────────────────────────────────────────────────────────────
 
-def get_hofman_stock():
-    r = requests.get(f"{HOFMAN_BASE}/stock", headers=HOFMAN_HEADERS)
+def get_hofman_variants():
+    """Récupère tous les produits Hofman avec leur stock (in_stock)."""
+    r = requests.get(f"{HOFMAN_BASE}/variants", headers=HOFMAN_HEADERS)
     r.raise_for_status()
     return r.json()
 
@@ -46,25 +47,50 @@ def get_location_id():
 
 def sync_stock():
     log.info("=== Synchronisation des stocks ===")
-    hofman_stock     = get_hofman_stock()
+    hofman_variants  = get_hofman_variants()
     shopify_variants = get_shopify_variants()
     location_id      = get_location_id()
-    hofman_by_sku    = {item["sku"]: item["quantity"] for item in hofman_stock if "sku" in item}
+
+    # Index Hofman par EAN et par article_number
+    hofman_by_ean = {}
+    hofman_by_ref = {}
+    for item in hofman_variants:
+        qty = 1 if str(item.get("in_stock", "0")) == "1" else 0
+        if item.get("ean"):
+            hofman_by_ean[item["ean"]] = qty
+        if item.get("article_number"):
+            hofman_by_ref[item["article_number"]] = qty
+
     updated = 0
     for variant in shopify_variants:
-        sku = variant.get("sku")
-        if not sku or sku not in hofman_by_sku:
+        sku = variant.get("sku") or ""
+        barcode = variant.get("barcode") or ""
+
+        # Cherche d'abord par EAN (barcode), puis par SKU (article_number)
+        if barcode and barcode in hofman_by_ean:
+            new_qty = hofman_by_ean[barcode]
+        elif sku and sku in hofman_by_ref:
+            new_qty = hofman_by_ref[sku]
+        elif sku and sku in hofman_by_ean:
+            new_qty = hofman_by_ean[sku]
+        else:
             continue
+
         r = requests.post(
             f"{SHOPIFY_BASE}/inventory_levels/set.json",
             headers=SHOPIFY_HEADERS,
-            json={"location_id": location_id, "inventory_item_id": variant["inventory_item_id"], "available": hofman_by_sku[sku]}
+            json={
+                "location_id":       location_id,
+                "inventory_item_id": variant["inventory_item_id"],
+                "available":         new_qty
+            }
         )
         if r.status_code == 200:
             updated += 1
-            log.info(f"  ✓ SKU {sku} → {hofman_by_sku[sku]} unités")
+            log.info(f"  ✓ SKU {sku} → {'en stock' if new_qty else 'rupture'}")
         else:
             log.warning(f"  ✗ SKU {sku} erreur {r.status_code}: {r.text}")
+
     log.info(f"=== {updated} stocks mis à jour ===")
 
 
