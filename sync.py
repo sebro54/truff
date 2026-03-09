@@ -6,21 +6,26 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 log = logging.getLogger(__name__)
 
 # ── Config ───────────────────────────────────────────────────────────────────
-HOFMAN_API_KEY = os.environ["HOFMAN_API_KEY"]
-SHOPIFY_TOKEN  = os.environ["SHOPIFY_TOKEN"]
-SHOPIFY_STORE  = os.environ["SHOPIFY_STORE"]
+HOFMAN_API_KEY = os.environ.get("HOFMAN_API_KEY", "")
+SHOPIFY_TOKEN  = os.environ.get("SHOPIFY_TOKEN", "")
+SHOPIFY_STORE  = os.environ.get("SHOPIFY_STORE", "")
+
+log.info(f"SHOPIFY_STORE: {SHOPIFY_STORE}")
+log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON VIDE'}")
+log.info(f"HOFMAN_API_KEY présent: {'oui' if HOFMAN_API_KEY else 'NON VIDE'}")
 
 HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2024-01"
 
-SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
-HOFMAN_HEADERS  = {"Locale": "en", "Content-Type": "application/json"}
+def get_shopify_headers():
+    return {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
+
+HOFMAN_HEADERS = {"Locale": "en", "Content-Type": "application/json"}
 
 
 # ── 1. STOCKS ────────────────────────────────────────────────────────────────
 
 def get_hofman_variants():
-    """Récupère tous les produits Hofman via /feeds/variants/json (paginé)."""
     all_items = []
     page = 1
     while True:
@@ -31,22 +36,17 @@ def get_hofman_variants():
         )
         r.raise_for_status()
         data = r.json()
-
         if isinstance(data, list):
             items = data
         else:
             items = data.get("data", data.get("items", []))
-
         if not items:
             break
-
         all_items += items
         log.info(f"  Page {page} : {len(items)} produits")
-
         if len(items) < 100:
             break
         page += 1
-
     log.info(f"  Total Hofman : {len(all_items)} produits")
     return all_items
 
@@ -54,7 +54,7 @@ def get_shopify_variants():
     variants = []
     url = f"{SHOPIFY_BASE}/variants.json?limit=250"
     while url:
-        r = requests.get(url, headers=SHOPIFY_HEADERS)
+        r = requests.get(url, headers=get_shopify_headers())
         r.raise_for_status()
         variants += r.json().get("variants", [])
         link = r.headers.get("Link", "")
@@ -66,7 +66,7 @@ def get_shopify_variants():
     return variants
 
 def get_location_id():
-    r = requests.get(f"{SHOPIFY_BASE}/locations.json", headers=SHOPIFY_HEADERS)
+    r = requests.get(f"{SHOPIFY_BASE}/locations.json", headers=get_shopify_headers())
     r.raise_for_status()
     return r.json()["locations"][0]["id"]
 
@@ -101,7 +101,7 @@ def sync_stock():
 
         r = requests.post(
             f"{SHOPIFY_BASE}/inventory_levels/set.json",
-            headers=SHOPIFY_HEADERS,
+            headers=get_shopify_headers(),
             json={
                 "location_id":       location_id,
                 "inventory_item_id": variant["inventory_item_id"],
@@ -122,7 +122,7 @@ def sync_stock():
 def get_new_shopify_orders():
     r = requests.get(
         f"{SHOPIFY_BASE}/orders.json?status=open&fulfillment_status=unfulfilled&limit=50",
-        headers=SHOPIFY_HEADERS
+        headers=get_shopify_headers()
     )
     r.raise_for_status()
     orders = r.json().get("orders", [])
@@ -156,12 +156,12 @@ def send_order_to_hofman(order):
     return r.status_code in (200, 201), r
 
 def tag_order_as_sent(order_id):
-    r = requests.get(f"{SHOPIFY_BASE}/orders/{order_id}.json?fields=tags", headers=SHOPIFY_HEADERS)
+    r = requests.get(f"{SHOPIFY_BASE}/orders/{order_id}.json?fields=tags", headers=get_shopify_headers())
     existing = r.json().get("order", {}).get("tags", "")
     new_tags = f"{existing}, hofman_sent".strip(", ")
     requests.put(
         f"{SHOPIFY_BASE}/orders/{order_id}.json",
-        headers=SHOPIFY_HEADERS,
+        headers=get_shopify_headers(),
         json={"order": {"id": order_id, "tags": new_tags}}
     )
 
