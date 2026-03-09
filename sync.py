@@ -14,23 +14,24 @@ HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2024-01"
 
 SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_TOKEN, "Content-Type": "application/json"}
+HOFMAN_HEADERS  = {"Locale": "fr", "Content-Type": "application/json"}
 
 
 # ── 1. STOCKS ────────────────────────────────────────────────────────────────
 
 def get_hofman_variants():
-    """Récupère tous les produits Hofman via le feed paginé."""
+    """Récupère tous les produits Hofman via /feeds/variants/json (paginé)."""
     all_items = []
     page = 1
     while True:
         r = requests.get(
-            f"{HOFMAN_BASE}/variant-feed",
-            params={"api_key": HOFMAN_API_KEY, "page": page}
+            f"{HOFMAN_BASE}/feeds/variants/json",
+            headers=HOFMAN_HEADERS,
+            params={"api_key": HOFMAN_API_KEY, "page": page, "per_page": 100}
         )
         r.raise_for_status()
         data = r.json()
 
-        # Gère les formats : liste directe ou objet paginé {data: [...]}
         if isinstance(data, list):
             items = data
         else:
@@ -40,10 +41,9 @@ def get_hofman_variants():
             break
 
         all_items += items
-        log.info(f"  Page {page} : {len(items)} produits récupérés")
+        log.info(f"  Page {page} : {len(items)} produits")
 
-        # Si moins de 250 résultats, c'est la dernière page
-        if len(items) < 250:
+        if len(items) < 100:
             break
         page += 1
 
@@ -76,7 +76,6 @@ def sync_stock():
     shopify_variants = get_shopify_variants()
     location_id      = get_location_id()
 
-    # Index par EAN et article_number
     hofman_by_ean = {}
     hofman_by_ref = {}
     for item in hofman_variants:
@@ -150,6 +149,7 @@ def send_order_to_hofman(order):
     }
     r = requests.post(
         f"{HOFMAN_BASE}/orders",
+        headers=HOFMAN_HEADERS,
         params={"api_key": HOFMAN_API_KEY},
         json=hofman_order
     )
