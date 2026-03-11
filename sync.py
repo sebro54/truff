@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 # ── Config ───────────────────────────────────────────────────────────────────
 HOFMAN_API_KEY = os.environ.get("HOFMAN_API_KEY", "")
 SHOPIFY_TOKEN  = os.environ.get("SHOPIFY_TOKEN", "")
-SHOPIFY_STORE  = "ywkigs-tb.myshopify.com"
+SHOPIFY_STORE  = "truffeo.shop"
 
 log.info(f"SHOPIFY_STORE: {SHOPIFY_STORE}")
 log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON VIDE'}")
