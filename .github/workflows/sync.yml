@@ -25,5 +25,5 @@ jobs:
         env:
           HOFMAN_API_KEY: ${{ secrets.HOFMAN_API_KEY }}
           SHOPIFY_TOKEN: ${{ secrets.SHOPIFY_TOKEN }}
-          SHOPIFY_STORE: "truffeo.shop"
+          SHOPIFY_STORE: "ywkigs-tb"
         run: python sync.py
