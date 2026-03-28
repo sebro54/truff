@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import logging
 
@@ -8,7 +9,7 @@ log = logging.getLogger(__name__)
 # ── Config ───────────────────────────────────────────────────────────────────
 HOFMAN_API_KEY = os.environ.get("HOFMAN_API_KEY", "")
 SHOPIFY_TOKEN  = os.environ.get("SHOPIFY_TOKEN", "")
-SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "ywkigs-tb.myshopify.com")
+SHOPIFY_STORE  = os.environ.get("SHOPIFY_STORE", "ywkigs-tb.myshopify.com")
 
 log.info(f"SHOPIFY_STORE: {SHOPIFY_STORE}")
 log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON VIDE'}")
@@ -63,6 +64,7 @@ def get_shopify_variants():
             for part in link.split(","):
                 if 'rel="next"' in part:
                     url = part.split(";")[0].strip().strip("<>")
+        time.sleep(0.5)
     return variants
 
 def get_location_id():
@@ -113,6 +115,7 @@ def sync_stock():
             log.info(f"  ✓ SKU {sku} → {'en stock' if new_qty else 'rupture'}")
         else:
             log.warning(f"  ✗ SKU {sku} erreur {r.status_code}: {r.text}")
+        time.sleep(0.6)
 
     log.info(f"=== {updated} stocks mis à jour ===")
 
@@ -164,6 +167,7 @@ def tag_order_as_sent(order_id):
         headers=get_shopify_headers(),
         json={"order": {"id": order_id, "tags": new_tags}}
     )
+    time.sleep(0.5)
 
 def process_orders():
     log.info("=== Traitement des commandes ===")
@@ -176,6 +180,7 @@ def process_orders():
             log.info(f"  ✓ Commande {order.get('name')} envoyée à Hofman")
         else:
             log.error(f"  ✗ Commande {order.get('name')} erreur {response.status_code}: {response.text}")
+        time.sleep(0.5)
     log.info("=== Commandes traitées ===")
 
 
