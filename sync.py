@@ -64,13 +64,25 @@ def get_shopify_variants():
             for part in link.split(","):
                 if 'rel="next"' in part:
                     url = part.split(";")[0].strip().strip("<>")
-        time.sleep(2)
+        time.sleep(1)
     return variants
 
 def get_location_id():
     r = requests.get(f"{SHOPIFY_BASE}/locations.json", headers=get_shopify_headers())
     r.raise_for_status()
-    return r.json()["locations"][0]["id"]
+    locations = r.json()["locations"]
+
+    for loc in locations:
+        log.info(f"  Emplacement: {loc['id']} - {loc['name']} - legacy: {loc.get('legacy', False)}")
+
+    # Prend le premier emplacement qui n'est pas un fulfillment service
+    for loc in locations:
+        if not loc.get("legacy", False):
+            log.info(f"  ✓ Emplacement sélectionné: {loc['name']}")
+            return loc["id"]
+
+    # Fallback sur le premier
+    return locations[0]["id"]
 
 def sync_stock():
     log.info("=== Synchronisation des stocks ===")
@@ -113,9 +125,11 @@ def sync_stock():
         if r.status_code == 200:
             updated += 1
             log.info(f"  ✓ SKU {sku} → {'en stock' if new_qty else 'rupture'}")
+        elif r.status_code == 422:
+            log.info(f"  ⚠ SKU {sku} ignoré (stock non géré par Shopify)")
         else:
             log.warning(f"  ✗ SKU {sku} erreur {r.status_code}: {r.text}")
-        time.sleep(0.6)
+        time.sleep(1)
 
     log.info(f"=== {updated} stocks mis à jour ===")
 
@@ -167,7 +181,7 @@ def tag_order_as_sent(order_id):
         headers=get_shopify_headers(),
         json={"order": {"id": order_id, "tags": new_tags}}
     )
-    time.sleep(0.5)
+    time.sleep(1)
 
 def process_orders():
     log.info("=== Traitement des commandes ===")
@@ -180,7 +194,7 @@ def process_orders():
             log.info(f"  ✓ Commande {order.get('name')} envoyée à Hofman")
         else:
             log.error(f"  ✗ Commande {order.get('name')} erreur {response.status_code}: {response.text}")
-        time.sleep(0.5)
+        time.sleep(1)
     log.info("=== Commandes traitées ===")
 
 
