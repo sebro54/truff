@@ -64,7 +64,7 @@ def get_shopify_variants():
             for part in link.split(","):
                 if 'rel="next"' in part:
                     url = part.split(";")[0].strip().strip("<>")
-        time.sleep(0.5)
+        time.sleep(2)
     return variants
 
 def get_location_id():
