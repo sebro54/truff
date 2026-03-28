@@ -2,7 +2,7 @@ name: Truffeo Sync
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # toutes les 5 min pour les commandes
+    - cron: '0 * * * *'   # toutes les 5 min pour les commandes
   workflow_dispatch:          # permet de lancer manuellement aussi
 
 jobs:
