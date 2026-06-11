@@ -11,9 +11,12 @@ HOFMAN_API_KEY = os.environ.get("HOFMAN_API_KEY", "")
 SHOPIFY_TOKEN  = os.environ.get("SHOPIFY_TOKEN", "")
 SHOPIFY_STORE  = os.environ.get("SHOPIFY_STORE", "ywkigs-tb.myshopify.com")
 
+# Nom de l'emplacement Shopify dédié au stock Hofman (modifiable via variable d'env)
+HOFMAN_LOCATION_NAME = os.environ.get("HOFMAN_LOCATION_NAME", "Hofman")
+
 log.info(f"SHOPIFY_STORE: {SHOPIFY_STORE}")
-log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON VIDE'}")
-log.info(f"HOFMAN_API_KEY présent: {'oui' if HOFMAN_API_KEY else 'NON VIDE'}")
+log.info(f"SHOPIFY_TOKEN présent: {'oui' if SHOPIFY_TOKEN else 'NON (vide)'}")
+log.info(f"HOFMAN_API_KEY présent: {'oui' if HOFMAN_API_KEY else 'NON (vide)'}")
 
 HOFMAN_BASE  = "https://api-prod.hofmananimalcare.nl"
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}/admin/api/2026-01"
@@ -68,21 +71,45 @@ def get_shopify_variants():
     return variants
 
 def get_location_id():
+    """Cible explicitement l'emplacement 'Hofman' — pour ne JAMAIS écraser
+    le stock perso de l'emplacement 'Home'."""
     r = requests.get(f"{SHOPIFY_BASE}/locations.json", headers=get_shopify_headers())
     r.raise_for_status()
     locations = r.json()["locations"]
 
     for loc in locations:
-        log.info(f"  Emplacement: {loc['id']} - {loc['name']} - legacy: {loc.get('legacy', False)}")
+        log.info(f"  Emplacement: {loc['id']} - {loc['name']}")
 
-    # Prend le premier emplacement qui n'est pas un fulfillment service
     for loc in locations:
-        if not loc.get("legacy", False):
-            log.info(f"  ✓ Emplacement sélectionné: {loc['name']}")
+        if loc["name"].strip().lower() == HOFMAN_LOCATION_NAME.strip().lower():
+            log.info(f"  ✓ Emplacement sélectionné: {loc['name']} ({loc['id']})")
             return loc["id"]
 
-    # Fallback sur le premier
-    return locations[0]["id"]
+    raise RuntimeError(
+        f"Emplacement '{HOFMAN_LOCATION_NAME}' introuvable dans Shopify. "
+        f"Vérifie le nom exact dans Paramètres → Emplacements."
+    )
+
+def set_inventory(location_id, inventory_item_id, qty):
+    """Écrit la quantité ; si l'article n'est pas encore rattaché à l'emplacement
+    Hofman (422), on le rattache puis on réessaie une fois."""
+    payload = {
+        "location_id":       location_id,
+        "inventory_item_id": inventory_item_id,
+        "available":         qty,
+    }
+    r = requests.post(f"{SHOPIFY_BASE}/inventory_levels/set.json",
+                      headers=get_shopify_headers(), json=payload)
+
+    if r.status_code == 422:
+        # Tentative de rattachement de l'article à l'emplacement, puis nouvel essai
+        requests.post(f"{SHOPIFY_BASE}/inventory_levels/connect.json",
+                      headers=get_shopify_headers(),
+                      json={"location_id": location_id,
+                            "inventory_item_id": inventory_item_id})
+        r = requests.post(f"{SHOPIFY_BASE}/inventory_levels/set.json",
+                          headers=get_shopify_headers(), json=payload)
+    return r
 
 def sync_stock():
     log.info("=== Synchronisation des stocks ===")
@@ -100,6 +127,7 @@ def sync_stock():
             hofman_by_ref[str(item["article_number"])] = qty
 
     updated = 0
+    skipped = 0
     for variant in shopify_variants:
         sku     = str(variant.get("sku") or "")
         barcode = str(variant.get("barcode") or "")
@@ -113,25 +141,19 @@ def sync_stock():
         else:
             continue
 
-        r = requests.post(
-            f"{SHOPIFY_BASE}/inventory_levels/set.json",
-            headers=get_shopify_headers(),
-            json={
-                "location_id":       location_id,
-                "inventory_item_id": variant["inventory_item_id"],
-                "available":         new_qty
-            }
-        )
+        r = set_inventory(location_id, variant["inventory_item_id"], new_qty)
+
         if r.status_code == 200:
             updated += 1
             log.info(f"  ✓ SKU {sku} → {'en stock' if new_qty else 'rupture'}")
         elif r.status_code == 422:
-            log.info(f"  ⚠ SKU {sku} ignoré (stock non géré par Shopify)")
+            skipped += 1
+            log.info(f"  ⚠ SKU {sku} ignoré (suivi de stock désactivé sur la variante)")
         else:
             log.warning(f"  ✗ SKU {sku} erreur {r.status_code}: {r.text}")
         time.sleep(1)
 
-    log.info(f"=== {updated} stocks mis à jour ===")
+    log.info(f"=== {updated} stocks mis à jour, {skipped} ignorés (suivi désactivé) ===")
 
 
 # ── 2. COMMANDES ─────────────────────────────────────────────────────────────
