@@ -1,0 +1,51 @@
+name: Truffeo - Alignement des prix Hofman
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simulation (decocher pour appliquer)"
+        type: boolean
+        default: true
+      active_only:
+        description: "Produits actifs uniquement"
+        type: boolean
+        default: true
+      round_90:
+        description: "Arrondir au ,90 superieur"
+        type: boolean
+        default: false
+      max_increase_pct:
+        description: "Plafond de hausse en % (0 = aucun)"
+        type: string
+        default: "0"
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+
+      - name: Alignement
+        env:
+          HOFMAN_API_KEY: ${{ secrets.HOFMAN_API_KEY }}
+          SHOPIFY_TOKEN:  ${{ secrets.SHOPIFY_TOKEN }}
+          SHOPIFY_STORE:  ${{ secrets.SHOPIFY_STORE }}
+          DRY_RUN:          ${{ inputs.dry_run }}
+          ACTIVE_ONLY:      ${{ inputs.active_only }}
+          ROUND_90:         ${{ inputs.round_90 }}
+          MAX_INCREASE_PCT: ${{ inputs.max_increase_pct }}
+        run: python fix_prices.py
+
+      - name: Recuperer le detail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-prix
+          path: plan_prix.csv
+          if-no-files-found: ignore
