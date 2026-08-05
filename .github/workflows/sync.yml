@@ -40,4 +40,21 @@ jobs:
           HOFMAN_LOCATION_NAME: Hofman
           DRY_RUN:     ${{ inputs.dry_run || 'false' }}
           SEND_ORDERS: ${{ inputs.send_orders || 'false' }}
+          DRAFT_DELISTED: "true"
+          DELIST_STATUS: "DRAFT"
+          MAX_DELIST: "400"
+          MAIL_TO:   ${{ secrets.MAIL_TO }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
         run: python truffeo_sync.py
+
+      - name: Rapports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-hofman
+          path: nouveautes.csv
+          if-no-files-found: ignore
