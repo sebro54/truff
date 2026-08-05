@@ -285,12 +285,16 @@ def draft_products(product_ids):
 def handle_delisted(variants, location_gid, matched_items):
     """Detecte les produits Hofman disparus du flux.
 
-    Un produit est considere comme Hofman s'il possede un niveau de stock
-    sur l'emplacement Hofman. Cela exclut d'office eBarf, YDOLO, Dibaq
-    et les fiches maison, qui n'y sont pas rattaches.
+    Deux conditions cumulatives pour qu'un produit soit considere Hofman :
+      1. il possede un niveau de stock sur l'emplacement Hofman ;
+      2. il a AU MOINS une variante portant un SKU ou un code-barre.
 
-    Un produit n'est mis en brouillon que si AUCUNE de ses variantes
-    n'est encore presente dans le flux.
+    La 2e condition est indispensable : une fiche sans identifiant ne peut
+    JAMAIS s'apparier au flux, elle paraitrait donc eternellement disparue.
+    Cela protege les fiches maison (Vetbed Topmast, kits, gammes sans SKU).
+
+    Un produit n'est retire que si AUCUNE de ses variantes n'est encore
+    presente dans le flux.
     """
     par_produit = {}
     for v in variants:
@@ -301,24 +305,38 @@ def handle_delisted(variants, location_gid, matched_items):
         inv = v["inventoryItem"]
         chez_hofman = location_gid in [n["location"]["id"]
                                        for n in inv["inventoryLevels"]["nodes"]]
+        a_identifiant = bool((v.get("sku") or "").strip()
+                             or (v.get("barcode") or "").strip())
+
         e = par_produit.setdefault(pid, {"titre": prod.get("title", ""),
                                          "statut": prod.get("status"),
-                                         "hofman": False, "appariee": False,
-                                         "items": []})
+                                         "hofman": False, "identifie": False,
+                                         "appariee": False, "items": [],
+                                         "refs": set()})
         if chez_hofman:
             e["hofman"] = True
             e["items"].append(inv["id"])
+        if a_identifiant:
+            e["identifie"] = True
+            e["refs"].add((v.get("sku") or v.get("barcode") or "").strip())
         if inv["id"] in matched_items:
             e["appariee"] = True
 
+    sans_id = [e for e in par_produit.values()
+               if e["hofman"] and not e["identifie"] and not e["appariee"]]
+    if sans_id:
+        log.info(f"  {len(sans_id)} produit(s) sans SKU ni code-barre — "
+                 f"ignore(s) par securite (fiches maison)")
+
     disparus = [(pid, e) for pid, e in par_produit.items()
-                if e["hofman"] and not e["appariee"]]
+                if e["hofman"] and e["identifie"] and not e["appariee"]]
     a_depublier = [(pid, e) for pid, e in disparus if e["statut"] == "ACTIVE"]
 
     log.info(f"  Disparus du flux Hofman : {len(disparus)} produit(s) "
              f"dont {len(a_depublier)} encore en ligne")
     for pid, e in a_depublier[:25]:
-        log.info(f"    - {e['titre'][:60]}")
+        refs = ", ".join(sorted(e.get("refs", []))[:3]) or "?"
+        log.info(f"    - [{refs}] {e['titre'][:55]}")
     if len(a_depublier) > 25:
         log.info(f"    ... et {len(a_depublier) - 25} autre(s)")
 
