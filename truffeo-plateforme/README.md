@@ -16,13 +16,12 @@ boutique via l'App Proxy Shopify.
 ```bash
 npm i -g supabase
 supabase link --project-ref <ref-du-projet>
-supabase db push          # applique les 4 migrations
+supabase db push          # applique les 5 migrations
 ```
 
-Les migrations sont dans l'ordre : schéma → logique d'enchères → RLS → quiz.
-Elles sont rejouables sur une base vide (`supabase db reset` en local, ce qui
-charge aussi `supabase/seed.sql` — des questions de démonstration, pas du
-contenu ACACED officiel).
+Les migrations sont dans l'ordre : schéma → logique d'enchères → RLS → quiz
+(schéma + logique + RLS) → contenu du quiz. Elles sont rejouables sur une
+base vide (`supabase db reset` en local).
 
 ### 2. Application
 
@@ -132,8 +131,25 @@ côté client avant d'avoir répondu.
   directement dans Supabase (table editor ou SQL) — pas d'interface
   d'administration dédiée.
 
-Le contenu de `supabase/seed.sql` est un jeu de questions factice pour tester
-le flux en local ; à remplacer par du vrai contenu avant l'ouverture au public.
+### Contenu livré
+
+`supabase/migrations/20260908000005_quiz_contenu.sql` charge :
+
+- **1178 questions** de culture animale générale (espérance de vie, poids,
+  gestation/incubation, régime alimentaire, sociabilité, rythme d'activité,
+  besoins d'hébergement, signes d'alerte santé, réglementation, transport),
+  générées à partir d'un jeu de faits vérifiés — ce n'est **pas** un examen
+  ACACED officiel, à valider/enrichir avec du contenu certifié avant un usage
+  en préparation réelle à l'examen.
+- Les **suggestions produit** utilisent de vrais handles du catalogue
+  Shopify Trufféo (récupérés via l'API au moment de la génération) — aucun
+  produit fictif. Si un produit change de handle ou est dépublié côté
+  Shopify, sa ligne dans `quiz_produits_suggeres` devient une impasse
+  silencieuse (le tirage au sort l'ignore juste, sans erreur) : à surveiller
+  si le catalogue bouge beaucoup.
+- Aucun produit n'est proposé pour le thème `reglementation` : la boutique
+  Trufféo vend de l'équipement animalier, pas de service de registre ou
+  d'identification.
 
 ## Reste à faire
 
@@ -145,5 +161,6 @@ le flux en local ; à remplacer par du vrai contenu avant l'ouverture au public.
 - [ ] Stripe Connect + webhooks
 - [ ] Notifications (surenchère, gain, expiration d'annonce)
 - [ ] Redirections 301 des anciennes pages `/pages/*` vers `/apps/*`
-- [ ] Vrai contenu ACACED pour le quiz (le seed est un jeu de test) + interface
+- [ ] Contenu ACACED certifié pour le quiz (le contenu actuel est un jeu de
+      culture animale générale, pas un examen officiel) + interface
       d'administration pour les questions et les produits suggérés
