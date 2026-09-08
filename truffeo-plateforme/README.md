@@ -16,11 +16,13 @@ boutique via l'App Proxy Shopify.
 ```bash
 npm i -g supabase
 supabase link --project-ref <ref-du-projet>
-supabase db push          # applique les 3 migrations
+supabase db push          # applique les 4 migrations
 ```
 
-Les migrations sont dans l'ordre : schéma → logique d'enchères → RLS.
-Elles sont rejouables sur une base vide (`supabase db reset` en local).
+Les migrations sont dans l'ordre : schéma → logique d'enchères → RLS → quiz.
+Elles sont rejouables sur une base vide (`supabase db reset` en local, ce qui
+charge aussi `supabase/seed.sql` — des questions de démonstration, pas du
+contenu ACACED officiel).
 
 ### 2. Application
 
@@ -103,6 +105,36 @@ Le modèle alternatif — dépôt-vente, où Trufféo achète puis revend — é
 statut de plateforme mais fait de toi le vendeur, avec la garantie de conformité
 à ta charge. À arbitrer avant de coder le paiement.
 
+## Quiz type ACACED
+
+`/quiz` liste les thèmes, `/quiz/<theme>` propose 10 questions tirées au
+hasard parmi celles publiées pour ce thème.
+
+Même logique que les enchères : la bonne réponse ne doit jamais être lisible
+côté client avant d'avoir répondu.
+
+- Le client lit les réponses via la vue `quiz_reponses_publiques`, qui
+  n'expose pas la colonne `est_correcte` — la table `quiz_reponses` n'a
+  d'ailleurs aucune policy RLS select pour anon/authenticated.
+- La correction, l'explication et l'éventuelle suggestion produit ne sont
+  renvoyées qu'en appelant `repondre_quiz(question_id, reponse_id)`
+  (`app/api/quiz/repondre`), qui enregistre aussi la tentative dans
+  `quiz_tentatives`.
+- Suggestion produit : chaque question a un thème (`reglementation`,
+  `biologie_besoins`, `alimentation`, `hebergement`, `comportement`,
+  `sante_prophylaxie`, `transport`). À chaque réponse, avec une probabilité
+  de 30 % (`p_probabilite_suggestion` dans `repondre_quiz`), un produit actif
+  de `quiz_produits_suggeres` pour ce thème est tiré au sort — pondéré par la
+  colonne `poids` — et renvoyé sous la forme d'un lien
+  `truffeo.shop/products/<handle>`. Le catalogue reste entièrement dans
+  Shopify : seul le handle est stocké côté Supabase.
+- Gérer les questions et les produits suggérés se fait pour l'instant
+  directement dans Supabase (table editor ou SQL) — pas d'interface
+  d'administration dédiée.
+
+Le contenu de `supabase/seed.sql` est un jeu de questions factice pour tester
+le flux en local ; à remplacer par du vrai contenu avant l'ouverture au public.
+
 ## Reste à faire
 
 - [ ] Import du JSON annuaire vers `structures`
@@ -113,3 +145,5 @@ statut de plateforme mais fait de toi le vendeur, avec la garantie de conformit�
 - [ ] Stripe Connect + webhooks
 - [ ] Notifications (surenchère, gain, expiration d'annonce)
 - [ ] Redirections 301 des anciennes pages `/pages/*` vers `/apps/*`
+- [ ] Vrai contenu ACACED pour le quiz (le seed est un jeu de test) + interface
+      d'administration pour les questions et les produits suggérés
