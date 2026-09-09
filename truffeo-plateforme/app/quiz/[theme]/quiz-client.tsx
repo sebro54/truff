@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { ThemeQuiz } from '@/lib/quiz-themes';
+import { BASE_PATH } from '@/lib/base-path';
 
 type Reponse = { id: string; question_id: string; intitule: string; ordre: number };
 type Question = { id: string; intitule: string; reponses: Reponse[] };
@@ -29,7 +30,7 @@ export default function QuizClient({ theme, questions }: { theme: ThemeQuiz; que
     setReponseChoisie(reponseId);
     setEnvoiEnCours(true);
     try {
-      const reponseHttp = await fetch('/api/quiz/repondre', {
+      const reponseHttp = await fetch(`${BASE_PATH}/api/quiz/repondre`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question_id: question.id, reponse_id: reponseId }),
