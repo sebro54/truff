@@ -50,9 +50,16 @@ Le secret de l'app va dans `SHOPIFY_APP_SECRET`. Shopify signe chaque requête ;
 
 ### 4. Cron des enchères
 
-`vercel.json` déclenche `/api/cron/encheres` toutes les minutes : ouverture des
-enchères programmées, clôture de celles arrivées à échéance. Protégé par
-`CRON_SECRET`.
+`vercel.json` déclenche `/api/cron/encheres` : ouverture des enchères
+programmées, clôture de celles arrivées à échéance. Protégé par `CRON_SECRET`.
+
+Le plan **Hobby** de Vercel n'autorise qu'un cron par jour — le déploiement
+est refusé si le fichier déclare une fréquence plus élevée. En attendant un
+passage au plan Pro, la fréquence est réglée sur une fois par jour
+(`0 3 * * *`), ce qui veut dire qu'une enchère peut rester affichée
+`en_cours` jusqu'à 24h après sa date de fin réelle avant d'être clôturée.
+Sans impact sur le quiz. À repasser à `* * * * *` avec le plan Pro avant
+d'ouvrir les enchères au public.
 
 ## Import de l'annuaire existant
 
