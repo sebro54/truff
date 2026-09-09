@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { ThemeQuiz } from '@/lib/quiz-themes';
 
 type Reponse = { id: string; question_id: string; intitule: string; ordre: number };
@@ -59,8 +60,8 @@ export default function QuizClient({ theme, questions }: { theme: ThemeQuiz; que
     return (
       <section>
         <h1>Quiz terminé — {theme.label}</h1>
-        <p>Score : {score} / {questions.length}</p>
-        <a href="/quiz">Choisir un autre thème</a>
+        <p className="resultat-score">Score : {score} / {questions.length}</p>
+        <Link href="/quiz" className="bouton-principal">Choisir un autre thème</Link>
       </section>
     );
   }
@@ -68,54 +69,65 @@ export default function QuizClient({ theme, questions }: { theme: ThemeQuiz; que
   return (
     <section>
       <h1>{theme.label}</h1>
-      <p>Question {index + 1} / {questions.length}</p>
-      <h2>{question.intitule}</h2>
+      <p className="progression">Question {index + 1} / {questions.length}</p>
 
-      <ul>
-        {question.reponses.map((r) => {
-          const estChoisie = reponseChoisie === r.id;
-          const estLaBonne = correction && r.id === correction.reponse_correcte_id;
-          return (
-            <li key={r.id}>
-              <button
-                type="button"
-                onClick={() => repondre(r.id)}
-                disabled={!!correction || envoiEnCours}
-                aria-pressed={estChoisie}
-                style={{
-                  fontWeight: estLaBonne ? 'bold' : undefined,
-                  textDecoration: estChoisie && correction && !correction.correcte ? 'line-through' : undefined,
-                }}
-              >
-                {r.intitule}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="carte-question">
+        <h2 className="enonce">{question.intitule}</h2>
 
-      {correction && (
-        <div>
-          <p>{correction.correcte ? 'Bonne réponse !' : 'Pas tout à fait.'}</p>
-          <p>{correction.explication}</p>
+        <ul className="liste-reponses">
+          {question.reponses.map((r) => {
+            const estChoisie = reponseChoisie === r.id;
+            const estLaBonne = correction && r.id === correction.reponse_correcte_id;
+            const classes = ['bouton-reponse'];
+            if (estLaBonne) classes.push('correcte');
+            else if (estChoisie && correction && !correction.correcte) classes.push('incorrecte');
 
-          {correction.suggestion && (
-            <p>
-              En lien avec cette question :{' '}
+            return (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => repondre(r.id)}
+                  disabled={!!correction || envoiEnCours}
+                  aria-pressed={estChoisie}
+                  className={classes.join(' ')}
+                >
+                  {r.intitule}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {correction && (
+          <div className="bloc-correction">
+            <p className={`verdict ${correction.correcte ? 'correcte' : 'incorrecte'}`}>
+              {correction.correcte ? 'Bonne réponse !' : 'Pas tout à fait.'}
+            </p>
+            <p className="explication">{correction.explication}</p>
+
+            {correction.suggestion && (
               <a
                 href={`https://truffeo.shop/products/${correction.suggestion.handle}`}
                 rel="nofollow noopener"
+                className="carte-produit"
               >
-                {correction.suggestion.titre}
+                {correction.suggestion.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={correction.suggestion.image_url} alt="" />
+                )}
+                <span className="carte-produit-texte">
+                  <span className="carte-produit-label">En lien avec cette question</span>
+                  {correction.suggestion.titre}
+                </span>
               </a>
-            </p>
-          )}
+            )}
 
-          <button type="button" onClick={suivant}>
-            {index + 1 < questions.length ? 'Question suivante' : 'Voir le résultat'}
-          </button>
-        </div>
-      )}
+            <button type="button" onClick={suivant} className="bouton-principal">
+              {index + 1 < questions.length ? 'Question suivante' : 'Voir le résultat'}
+            </button>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

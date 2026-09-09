@@ -57,11 +57,11 @@ export default async function Annuaire({ searchParams }: { searchParams: Recherc
       <h1>Annuaire professionnel</h1>
 
       {resultats.length === 0 ? (
-        <p>Aucune structure ne correspond à cette recherche. Élargissez le rayon ou changez de métier.</p>
+        <p className="intro">Aucune structure ne correspond à cette recherche. Élargissez le rayon ou changez de métier.</p>
       ) : (
-        <ul>
+        <ul className="grille-themes">
           {resultats.map((s: any) => (
-            <li key={s.id}>
+            <li key={s.id} className="carte-theme">
               <h2>{s.nom}</h2>
               <p>
                 {s.type} · {s.code_postal} {s.ville}
