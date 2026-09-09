@@ -1,0 +1,249 @@
+:root {
+  --couleur-fond: #faf7f2;
+  --couleur-texte: #2b2420;
+  --couleur-texte-att: #6b6258;
+  --couleur-accent: #2f6b4f;
+  --couleur-accent-fonce: #234f3a;
+  --couleur-carte: #ffffff;
+  --couleur-bordure: #e6e0d6;
+  --couleur-correcte: #2f6b4f;
+  --couleur-incorrecte: #a5432f;
+  --rayon: 12px;
+  --ombre: 0 1px 2px rgba(43, 36, 32, 0.06), 0 4px 12px rgba(43, 36, 32, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--couleur-fond);
+  color: var(--couleur-texte);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--couleur-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.entete {
+  border-bottom: 1px solid var(--couleur-bordure);
+  background: var(--couleur-carte);
+}
+
+.entete-contenu {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px 20px;
+}
+
+.entete-lien {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--couleur-accent-fonce);
+}
+
+.conteneur {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+h1 {
+  font-size: 1.7rem;
+  margin: 0 0 8px;
+  color: var(--couleur-accent-fonce);
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 0 0 4px;
+}
+
+.intro {
+  color: var(--couleur-texte-att);
+  margin: 0 0 28px;
+}
+
+.grille-themes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.carte-theme {
+  display: block;
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 16px 18px;
+  transition: border-color 0.15s ease;
+}
+
+.carte-theme:hover {
+  border-color: var(--couleur-accent);
+  text-decoration: none;
+}
+
+.carte-theme h2 {
+  color: var(--couleur-accent-fonce);
+}
+
+.carte-theme p {
+  margin: 0;
+  color: var(--couleur-texte-att);
+  font-size: 0.92rem;
+}
+
+.progression {
+  color: var(--couleur-texte-att);
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+}
+
+.carte-question {
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 24px;
+  margin-top: 8px;
+}
+
+.enonce {
+  font-size: 1.15rem;
+  margin: 0 0 20px;
+}
+
+.liste-reponses {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.bouton-reponse {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 12px 16px;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 8px;
+  background: var(--couleur-fond);
+  color: var(--couleur-texte);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bouton-reponse:hover:not(:disabled) {
+  border-color: var(--couleur-accent);
+}
+
+.bouton-reponse:disabled {
+  cursor: default;
+}
+
+.bouton-reponse.correcte {
+  border-color: var(--couleur-correcte);
+  background: #eef6f0;
+  font-weight: 600;
+  color: var(--couleur-correcte);
+}
+
+.bouton-reponse.incorrecte {
+  border-color: var(--couleur-incorrecte);
+  background: #fbeeeb;
+  color: var(--couleur-incorrecte);
+  text-decoration: line-through;
+}
+
+.bloc-correction {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--couleur-bordure);
+}
+
+.verdict {
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.verdict.correcte {
+  color: var(--couleur-correcte);
+}
+
+.verdict.incorrecte {
+  color: var(--couleur-incorrecte);
+}
+
+.explication {
+  color: var(--couleur-texte-att);
+  margin: 0 0 16px;
+}
+
+.carte-produit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 20px;
+  background: var(--couleur-fond);
+}
+
+.carte-produit img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.carte-produit-texte {
+  font-size: 0.92rem;
+}
+
+.carte-produit-label {
+  display: block;
+  color: var(--couleur-texte-att);
+  font-size: 0.8rem;
+}
+
+.bouton-principal {
+  font: inherit;
+  font-weight: 600;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--couleur-accent);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.bouton-principal:hover {
+  background: var(--couleur-accent-fonce);
+}
+
+.resultat-score {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--couleur-accent-fonce);
+  margin: 0 0 20px;
+}

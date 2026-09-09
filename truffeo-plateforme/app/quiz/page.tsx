@@ -7,13 +7,15 @@ export default function QuizAccueil() {
   return (
     <section>
       <h1>Quiz ACACED</h1>
-      <p>Teste tes connaissances comme à l&apos;examen, thème par thème.</p>
+      <p className="intro">Teste tes connaissances comme à l&apos;examen, thème par thème.</p>
 
-      <ul>
+      <ul className="grille-themes">
         {THEMES_QUIZ.map((theme) => (
           <li key={theme.slug}>
-            <h2><Link href={`/quiz/${theme.slug}`}>{theme.label}</Link></h2>
-            <p>{theme.description}</p>
+            <Link href={`/quiz/${theme.slug}`} className="carte-theme">
+              <h2>{theme.label}</h2>
+              <p>{theme.description}</p>
+            </Link>
           </li>
         ))}
       </ul>
