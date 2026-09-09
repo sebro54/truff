@@ -32,7 +32,8 @@ npm run dev
 ```
 
 En développement, la vérification de signature de l'App Proxy est désactivée :
-`http://localhost:3000/apps/annuaire` fonctionne directement.
+`http://localhost:3000/apps/communaute/annuaire` fonctionne directement. Le
+`basePath` (`/apps/communaute`) s'applique même en local.
 
 ### 3. App Proxy Shopify
 
@@ -70,6 +71,15 @@ passage au plan Pro, la fréquence est réglée sur une fois par jour
 `en_cours` jusqu'à 24h après sa date de fin réelle avant d'être clôturée.
 Sans impact sur le quiz. À repasser à `* * * * *` avec le plan Pro avant
 d'ouvrir les enchères au public.
+
+## Rendu Liquid
+
+`/quiz`, `/quiz/[theme]` et `/annuaire` sont des Route Handlers (pas des
+pages React) qui répondent avec `Content-Type: application/liquid` —
+Shopify insère alors la réponse dans le layout du thème (header, footer,
+menu de la boutique) au lieu de la relayer telle quelle. Une réponse Liquid
+ne peut pas être hydratée : le quiz fonctionne donc en formulaires/liens
+HTML classiques, sans JavaScript côté client.
 
 ## Import de l'annuaire existant
 
