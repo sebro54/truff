@@ -1,3 +1,6 @@
+// Malgré le nom du fichier, escapeHtml/melanger/reponseLiquid sont des
+// utilitaires Liquid génériques réutilisés par d'autres routes (annuaire).
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
