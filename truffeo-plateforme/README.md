@@ -36,22 +36,32 @@ En développement, la vérification de signature de l'App Proxy est désactivée
 
 ### 3. App Proxy Shopify
 
+L'app entière vit sous `/apps/communaute` (voir `basePath` dans
+`next.config.mjs`) — un seul App Proxy couvre l'annuaire et le quiz.
+
 Dans l'admin Shopify → Paramètres → Applications → Développer des applications →
 créer une app personnalisée, puis Configuration → App proxy :
 
 | Champ | Valeur |
 |---|---|
-| Sous-préfixe | `apps` |
-| Préfixe | `annuaire` (un proxy par service, ou `communaute` pour tout regrouper) |
-| URL du proxy | `https://<projet>.vercel.app/apps/annuaire` |
+| Préfixe du sous-chemin | `apps` |
+| Sous-chemin | `communaute` |
+| URL du proxy | `https://<projet>.vercel.app/apps/communaute` |
+
+**L'URL du proxy doit se terminer par `/apps/communaute`** — Shopify retire le
+préfixe `/apps/communaute` avant de relayer la requête et l'ajoute à l'URL du
+proxy ; comme l'app elle-même exige ce préfixe (`basePath`), il faut qu'il
+soit présent des deux côtés. L'oublier casse tout : liens internes, appels
+`fetch()` vers `/api/...`, et chargement de `_next/static/...` (CSS/JS).
 
 Le secret de l'app va dans `SHOPIFY_APP_SECRET`. Shopify signe chaque requête ;
 `lib/app-proxy.ts` la vérifie et refuse les appels directs à l'URL Vercel.
 
 ### 4. Cron des enchères
 
-`vercel.json` déclenche `/api/cron/encheres` : ouverture des enchères
-programmées, clôture de celles arrivées à échéance. Protégé par `CRON_SECRET`.
+`vercel.json` déclenche `/apps/communaute/api/cron/encheres` (même `basePath`
+que le reste de l'app) : ouverture des enchères programmées, clôture de
+celles arrivées à échéance. Protégé par `CRON_SECRET`.
 
 Le plan **Hobby** de Vercel n'autorise qu'un cron par jour — le déploiement
 est refusé si le fichier déclare une fréquence plus élevée. En attendant un

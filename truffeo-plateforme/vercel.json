@@ -1,5 +1,5 @@
 {
   "crons": [
-    { "path": "/api/cron/encheres", "schedule": "0 3 * * *" }
+    { "path": "/apps/communaute/api/cron/encheres", "schedule": "0 3 * * *" }
   ]
 }
