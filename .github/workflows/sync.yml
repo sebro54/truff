@@ -2,7 +2,7 @@ name: Truffeo - Sync Hofman
 
 on:
   schedule:
-    # 4 fois par jour (UTC) : 05h, 10h, 14h, 19h — economise les minutes Actions
+    # 4 fois par jour (UTC) : 05h, 10h, 14h, 19h
     - cron: "0 5,10,14,19 * * *"
   workflow_dispatch:
     inputs:
@@ -32,12 +32,21 @@ jobs:
 
       - run: pip install requests
 
+      - name: Restaurer l'etat du catalogue Hofman
+        uses: actions/cache/restore@v4
+        with:
+          path: .state
+          key: hofman-catalog-${{ github.run_id }}
+          restore-keys: |
+            hofman-catalog-
+
       - name: Synchronisation
         env:
           HOFMAN_API_KEY: ${{ secrets.HOFMAN_API_KEY }}
           SHOPIFY_TOKEN:  ${{ secrets.SHOPIFY_TOKEN }}
           SHOPIFY_STORE:  ${{ secrets.SHOPIFY_STORE }}
           HOFMAN_LOCATION_NAME: Hofman
+          HOFMAN_STATE_FILE: .state/hofman_catalog.json
           DRY_RUN:     ${{ inputs.dry_run || 'false' }}
           SEND_ORDERS: ${{ inputs.send_orders || 'false' }}
           DRAFT_DELISTED: "true"
@@ -49,12 +58,21 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
-        run: python truffeo_sync.py
+        run: python truffeo_sync_v2.py
+
+      - name: Sauvegarder l'etat du catalogue Hofman
+        if: success() && inputs.dry_run != true
+        uses: actions/cache/save@v4
+        with:
+          path: .state
+          key: hofman-catalog-${{ github.run_id }}
 
       - name: Rapports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rapports-hofman
-          path: nouveautes.csv
+          name: rapports-hofman-${{ github.run_id }}
+          path: |
+            nouveautes.csv
+            ajouts_depuis_derniere_synchro.csv
           if-no-files-found: ignore
