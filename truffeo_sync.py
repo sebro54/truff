@@ -46,6 +46,13 @@ DELIST_STATUS = os.environ.get("DELIST_STATUS", "DRAFT").upper()
 # Garde-fou : au-dela de ce nombre de disparitions, on ne retire RIEN.
 # Protege contre un flux tronque ou une panne d'API cote Hofman.
 MAX_DELIST = int(os.environ.get("MAX_DELIST", "400"))
+# Fiches importees de Hofman mais jamais rattachees a l'emplacement Hofman
+# (creees sur "Home" avant la synchro, ex. MOSE0027A). On les reconnait a leurs
+# tags de categorie Hofman ("Dog - Toys", "Horse - Care", "Cattle - Calving"...).
+HOFMAN_TAG_REGEX = re.compile(os.environ.get(
+    "HOFMAN_TAG_REGEX",
+    r"^(Dog|Cat|Horse|Bird|Cattle|Rodents?|Small animals?|Fish|Reptiles?|"
+    r"Sheep|Goats?|Pigs?|Poultry|Rider|Stable|Pond|Farm|Garden) - \S"))
 
 # ── Rapport par e-mail ───────────────────────────────────────────────────────
 MAIL_TO   = os.environ.get("MAIL_TO", "")
@@ -168,7 +175,7 @@ query($cursor: String) {
     nodes {
       sku
       barcode
-      product { id status title }
+      product { id status title tags }
       inventoryItem {
         id
         tracked
@@ -303,8 +310,11 @@ def handle_delisted(variants, location_gid, matched_items):
         if not pid:
             continue
         inv = v["inventoryItem"]
-        chez_hofman = location_gid in [n["location"]["id"]
-                                       for n in inv["inventoryLevels"]["nodes"]]
+        sur_emplacement = location_gid in [n["location"]["id"]
+                                           for n in inv["inventoryLevels"]["nodes"]]
+        tag_hofman = any(HOFMAN_TAG_REGEX.match(t or "")
+                         for t in (prod.get("tags") or []))
+        chez_hofman = sur_emplacement or tag_hofman
         a_identifiant = bool((v.get("sku") or "").strip()
                              or (v.get("barcode") or "").strip())
 
@@ -316,6 +326,8 @@ def handle_delisted(variants, location_gid, matched_items):
         if chez_hofman:
             e["hofman"] = True
             e["items"].append(inv["id"])
+            if not sur_emplacement:
+                e["orphelin"] = True
         if a_identifiant:
             e["identifie"] = True
             e["refs"].add((v.get("sku") or v.get("barcode") or "").strip())
@@ -331,6 +343,10 @@ def handle_delisted(variants, location_gid, matched_items):
     disparus = [(pid, e) for pid, e in par_produit.items()
                 if e["hofman"] and e["identifie"] and not e["appariee"]]
     a_depublier = [(pid, e) for pid, e in disparus if e["statut"] == "ACTIVE"]
+    orphelins = sum(1 for _, e in a_depublier if e.get("orphelin"))
+    if orphelins:
+        log.info(f"  dont {orphelins} fiche(s) Hofman hors emplacement Hofman "
+                 f"(reperees par leurs tags de categorie)")
 
     log.info(f"  Disparus du flux Hofman : {len(disparus)} produit(s) "
              f"dont {len(a_depublier)} encore en ligne")
@@ -350,7 +366,8 @@ def handle_delisted(variants, location_gid, matched_items):
         return []
 
     # Stock remis a zero : le produit ne doit plus etre vendable.
-    remise_a_zero = [(iid, 0) for _, e in a_depublier for iid in e["items"]]
+    remise_a_zero = [(iid, 0) for _, e in a_depublier if not e.get("orphelin")
+                     for iid in e["items"]]
 
     if DRY_RUN:
         log.info("  DRY_RUN : aucune depublication effectuee.")
